@@ -15,7 +15,25 @@
 
       h1 { font-size: 1.5rem; }
       .imports { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
-      button { padding: .6rem 1rem; cursor: pointer; }
+      .import-button {
+        position: relative;
+        display: inline-block;
+        padding: .75rem 1rem;
+        border: 1px solid #555;
+        border-radius: 4px;
+        background: #f3f3f3;
+        cursor: pointer;
+      }
+      .import-button:focus-within { outline: 2px solid #005fcc; outline-offset: 2px; }
+      .import-button input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
       .status { min-height: 1.4em; margin: .5rem 0; }
       .error { color: #a00000; }
       .table-container { overflow-x: auto; margin: 1.5rem 0; }
@@ -28,12 +46,17 @@
   </head>
   <body>
     <h1>Valeurs nutritionnelles</h1>
-    <p>Sélectionnez vos fichiers JSON dans le dossier OneDrive\Import_1D.</p>
+    <p>Sélectionnez vos fichiers JSON dans le dossier OneDrive/Import_1D.</p>
+    <p class="hint">Sur iPhone, ouvrez OneDrive depuis l'application Fichiers et sélectionnez le fichier souhaité.</p>
     <div class="imports">
-      <button type="button" id="import-cible">Importer ali_cible.json</button>
-      <input type="file" id="fichier-cible" accept=".json,application/json" hidden>
-      <button type="button" id="import-repas">Importer les aliments</button>
-      <input type="file" id="fichier-repas" accept=".json,application/json" hidden>
+      <label class="import-button">
+        Importer ali_cible.json
+        <input type="file" id="fichier-cible">
+      </label>
+      <label class="import-button">
+        Importer les aliments
+        <input type="file" id="fichier-repas">
+      </label>
     </div>
     <p id="statut-cible" class="status" role="status" aria-live="polite"></p>
     <p id="statut-repas" class="status" role="status" aria-live="polite"></p>
@@ -111,15 +134,24 @@
         afficher("valeurs-repas", totaux.map((valeur) => format.format(valeur)));
       }
 
-      function configurerImport(bouton, fichier, statut, traiter) {
+      function lireFichier(fichier) {
+        return new Promise((resolve, reject) => {
+          const lecteur = new FileReader();
+          lecteur.onload = () => resolve(lecteur.result);
+          lecteur.onerror = () => reject(new Error("Le fichier ne peut pas être lu."));
+          lecteur.onabort = () => reject(new Error("La lecture du fichier a été interrompue."));
+          lecteur.readAsText(fichier);
+        });
+      }
+
+      function configurerImport(fichier, statut, traiter) {
         const input = document.getElementById(fichier);
         const message = document.getElementById(statut);
-        document.getElementById(bouton).addEventListener("click", () => input.click());
         input.addEventListener("change", async () => {
           const selection = input.files[0];
           if (!selection) return;
           try {
-            const donnees = JSON.parse(await selection.text());
+            const donnees = JSON.parse(await lireFichier(selection));
             traiter(donnees);
             message.textContent = `Fichier importé : ${selection.name}`;
             message.classList.remove("error");
@@ -132,8 +164,8 @@
         });
       }
 
-      configurerImport("import-cible", "fichier-cible", "statut-cible", lireCible);
-      configurerImport("import-repas", "fichier-repas", "statut-repas", lireRepas);
+      configurerImport("fichier-cible", "statut-cible", lireCible);
+      configurerImport("fichier-repas", "statut-repas", lireRepas);
     </script>
   </body>
 </html>
