@@ -3,8 +3,137 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Valeurs nutritionnelles</title>
+    <style>
+      body {
+        margin: 2rem auto;
+        padding: 0 1rem;
+        max-width: 760px;
+        font-family: Arial, sans-serif;
+        color: #222;
+      }
+
+      h1 { font-size: 1.5rem; }
+      .imports { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+      button { padding: .6rem 1rem; cursor: pointer; }
+      .status { min-height: 1.4em; margin: .5rem 0; }
+      .error { color: #a00000; }
+      .table-container { overflow-x: auto; margin: 1.5rem 0; }
+      table { width: 100%; border-collapse: collapse; text-align: center; }
+      caption { padding: .5rem; font-weight: bold; }
+      th, td { border: 1px solid #333; padding: .5rem; }
+      th { background: #f3f3f3; }
+      .hint { color: #555; font-size: .9rem; }
+    </style>
   </head>
   <body>
+    <h1>Valeurs nutritionnelles</h1>
+    <p>Sélectionnez vos fichiers JSON dans le dossier OneDrive\Import_1D.</p>
+    <div class="imports">
+      <button type="button" id="import-cible">Importer ali_cible.json</button>
+      <input type="file" id="fichier-cible" accept=".json,application/json" hidden>
+      <button type="button" id="import-repas">Importer les aliments</button>
+      <input type="file" id="fichier-repas" accept=".json,application/json" hidden>
+    </div>
+    <p id="statut-cible" class="status" role="status" aria-live="polite"></p>
+    <p id="statut-repas" class="status" role="status" aria-live="polite"></p>
+
+    <div class="table-container">
+      <table>
+        <caption>Valeurs cibles</caption>
+        <thead>
+          <tr><th scope="col">Kcal</th><th scope="col">Glucides (g)</th><th scope="col">Lipides (g)</th><th scope="col">Protéines (g)</th></tr>
+        </thead>
+        <tbody>
+          <tr id="valeurs-cible"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="pourcentages-cible"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-container">
+      <table>
+        <caption>Somme des aliments importés</caption>
+        <thead>
+          <tr><th scope="col">Kcal</th><th scope="col">Glucides (g)</th><th scope="col">Lipides (g)</th><th scope="col">Protéines (g)</th></tr>
+        </thead>
+        <tbody>
+          <tr id="valeurs-repas"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">Les valeurs affichées sont arrondies à 6 décimales si nécessaire.</p>
+    <script>
+      const format = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 6 });
+
+      function nombres(objet, champs) {
+        if (!objet || typeof objet !== "object" || Array.isArray(objet)) {
+          throw new Error("Une entrée du fichier n'est pas valide.");
+        }
+        return champs.map((champ) => {
+          const valeur = objet[champ];
+          if (typeof valeur !== "number" || !Number.isFinite(valeur)) {
+            throw new Error(`Le champ « ${champ} » doit être un nombre.`);
+          }
+          return valeur;
+        });
+      }
+
+      function afficher(ligne, valeurs) {
+        document.getElementById(ligne).querySelectorAll("td").forEach((cellule, index) => {
+          cellule.textContent = valeurs[index];
+        });
+      }
+
+      function lireCible(donnees) {
+        if (!Array.isArray(donnees?.cible) || donnees.cible.length !== 1) {
+          throw new Error("Le fichier doit contenir exactement une entrée dans « cible ».");
+        }
+        const cible = donnees.cible[0];
+        const valeurs = nombres(cible, ["Kcal", "Glu", "Lip g", "Prot p"]);
+        const pourcentages = nombres(cible, ["Glu %", "Lip %", "Prot %"]);
+        afficher("valeurs-cible", valeurs.map((valeur) => format.format(valeur)));
+        afficher("pourcentages-cible", ["", ...pourcentages.map((valeur) => `${format.format(valeur)} %`)]);
+      }
+
+      function lireRepas(donnees) {
+        if (!Array.isArray(donnees?.repas)) {
+          throw new Error("Le fichier doit contenir une liste « repas ».");
+        }
+        const totaux = [0, 0, 0, 0];
+        donnees.repas.forEach((repas) => {
+          nombres(repas, ["calories", "glucide", "lipide", "proteine"]).forEach((valeur, index) => {
+            totaux[index] += valeur;
+            if (!Number.isFinite(totaux[index])) {
+              throw new Error("La somme des aliments est trop grande.");
+            }
+          });
+        });
+        afficher("valeurs-repas", totaux.map((valeur) => format.format(valeur)));
+      }
+
+      function configurerImport(bouton, fichier, statut, traiter) {
+        const input = document.getElementById(fichier);
+        const message = document.getElementById(statut);
+        document.getElementById(bouton).addEventListener("click", () => input.click());
+        input.addEventListener("change", async () => {
+          const selection = input.files[0];
+          if (!selection) return;
+          try {
+            const donnees = JSON.parse(await selection.text());
+            traiter(donnees);
+            message.textContent = `Fichier importé : ${selection.name}`;
+            message.classList.remove("error");
+          } catch (erreur) {
+            message.textContent = `Import impossible : ${erreur.message}`;
+            message.classList.add("error");
+          } finally {
+            input.value = "";
+          }
+        });
+      }
+
+      configurerImport("import-cible", "fichier-cible", "statut-cible", lireCible);
+      configurerImport("import-repas", "fichier-repas", "statut-repas", lireRepas);
+    </script>
   </body>
 </html>
