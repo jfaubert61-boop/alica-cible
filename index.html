@@ -69,7 +69,7 @@
         </thead>
         <tbody>
           <tr id="valeurs-cible"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr id="pourcentages-cible"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="pourcentages-cible"><td>%</td><td>—</td><td>—</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -81,12 +81,16 @@
         </thead>
         <tbody>
           <tr id="valeurs-repas"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="rapport-repas"><td>Réelle / Cible</td><td>—</td><td>—</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
     <p class="hint">Les valeurs affichées sont arrondies à 6 décimales si nécessaire.</p>
     <script>
       const format = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 6 });
+      const formatPourcentage = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+      let valeursCible = null;
+      let valeursRepas = null;
 
       function nombres(objet, champs) {
         if (!objet || typeof objet !== "object" || Array.isArray(objet)) {
@@ -107,6 +111,15 @@
         });
       }
 
+      function afficherRapport() {
+        const rapports = [1, 2, 3].map((index) => {
+          if (!valeursCible || !valeursRepas || valeursCible[index] === 0) return "—";
+          const rapport = valeursRepas[index] / valeursCible[index] * 100;
+          return Number.isFinite(rapport) ? `${formatPourcentage.format(rapport)} %` : "—";
+        });
+        afficher("rapport-repas", ["Réelle / Cible", ...rapports]);
+      }
+
       function lireCible(donnees) {
         if (!Array.isArray(donnees?.cible) || donnees.cible.length !== 1) {
           throw new Error("Le fichier doit contenir exactement une entrée dans « cible ».");
@@ -115,7 +128,9 @@
         const valeurs = nombres(cible, ["Kcal", "Glu", "Lip g", "Prot p"]);
         const pourcentages = nombres(cible, ["Glu %", "Lip %", "Prot %"]);
         afficher("valeurs-cible", valeurs.map((valeur) => format.format(valeur)));
-        afficher("pourcentages-cible", ["", ...pourcentages.map((valeur) => `${format.format(valeur)} %`)]);
+        afficher("pourcentages-cible", ["%", ...pourcentages.map((valeur) => `${format.format(valeur)} %`)]);
+        valeursCible = valeurs;
+        afficherRapport();
       }
 
       function lireRepas(donnees) {
@@ -132,6 +147,8 @@
           });
         });
         afficher("valeurs-repas", totaux.map((valeur) => format.format(valeur)));
+        valeursRepas = totaux;
+        afficherRapport();
       }
 
       function lireFichier(fichier) {
@@ -151,9 +168,13 @@
           const selection = input.files[0];
           if (!selection) return;
           try {
-            const donnees = JSON.parse(await lireFichier(selection));
+            const texte = await lireFichier(selection);
+            const accoladeManquante = fichier === "fichier-repas" &&
+              /^\s*"date"\s*:/.test(texte) && /\}\s*$/.test(texte);
+            const donnees = JSON.parse(accoladeManquante ? `{${texte}` : texte);
             traiter(donnees);
-            message.textContent = `Fichier importé : ${selection.name}`;
+            message.textContent = `Fichier importé : ${selection.name}` +
+              (accoladeManquante ? " (accolade ouvrante manquante ajoutée pour la lecture)." : "");
             message.classList.remove("error");
           } catch (erreur) {
             message.textContent = `Import impossible : ${erreur.message}`;
