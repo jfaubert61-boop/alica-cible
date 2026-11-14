@@ -69,7 +69,8 @@
         </thead>
         <tbody>
           <tr id="valeurs-cible"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr id="pourcentages-cible"><td>%</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="pourcentages-cible"><td>% kcal totales</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="kcal-cible"><td>kcal</td><td>—</td><td>—</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -82,6 +83,7 @@
         <tbody>
           <tr id="valeurs-repas"><td>—</td><td>—</td><td>—</td><td>—</td></tr>
           <tr id="rapport-repas"><td>Réelle / Cible</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr id="ecart-repas"><td>en (g)</td><td>—</td><td>—</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
@@ -117,7 +119,12 @@
           const rapport = valeursRepas[index] / valeursCible[index] * 100;
           return Number.isFinite(rapport) ? `${formatPourcentage.format(rapport)} %` : "—";
         });
+        const ecarts = [1, 2, 3].map((index) => {
+          if (!valeursCible || !valeursRepas) return "—";
+          return format.format(valeursRepas[index] - valeursCible[index]);
+        });
         afficher("rapport-repas", ["Réelle / Cible", ...rapports]);
+        afficher("ecart-repas", ["en (g)", ...ecarts]);
       }
 
       function lireCible(donnees) {
@@ -127,8 +134,13 @@
         const cible = donnees.cible[0];
         const valeurs = nombres(cible, ["Kcal", "Glu", "Lip g", "Prot p"]);
         const pourcentages = nombres(cible, ["Glu %", "Lip %", "Prot %"]);
+        const caloriesNutriments = pourcentages.map((pourcentage) => valeurs[0] * pourcentage / 100);
+        if (!caloriesNutriments.every(Number.isFinite)) {
+          throw new Error("Le calcul des calories des nutriments dépasse la valeur maximale.");
+        }
         afficher("valeurs-cible", valeurs.map((valeur) => format.format(valeur)));
-        afficher("pourcentages-cible", ["%", ...pourcentages.map((valeur) => `${format.format(valeur)} %`)]);
+        afficher("pourcentages-cible", ["% kcal totales", ...pourcentages.map((valeur) => `${formatPourcentage.format(valeur)} %`)]);
+        afficher("kcal-cible", ["kcal", ...caloriesNutriments.map((valeur) => format.format(valeur))]);
         valeursCible = valeurs;
         afficherRapport();
       }
