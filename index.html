@@ -87,10 +87,10 @@
         </tbody>
       </table>
     </div>
-    <p class="hint">Les valeurs affichées sont arrondies à 6 décimales si nécessaire.</p>
+    <p class="hint">Les valeurs affichées sont arrondies à l'unité.</p>
     <script>
-      const format = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 6 });
-      const formatPourcentage = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+      const format = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+      const formatPourcentage = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
       let valeursCible = null;
       let valeursRepas = null;
 
