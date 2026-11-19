@@ -57,7 +57,9 @@
         Importer les repas JSON
         <input type="file" id="fichier-repas">
       </label>
+      <button type="button" class="import-button" id="sauvegarder-cible" disabled>Sauvegarder les valeurs cibles</button>
     </div>
+    <p class="hint">Les valeurs cibles sauvegardées sont conservées dans ce navigateur et affichées à la prochaine ouverture.</p>
     <p id="statut-cible" class="status" role="status" aria-live="polite"></p>
     <p id="statut-repas" class="status" role="status" aria-live="polite"></p>
 
@@ -91,8 +93,10 @@
     <script>
       const format = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
       const formatPourcentage = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+      const cleCible = "ali-cible";
       let valeursCible = null;
       let valeursRepas = null;
+      let donneesCible = null;
 
       function nombres(objet, champs) {
         if (!objet || typeof objet !== "object" || Array.isArray(objet)) {
@@ -142,6 +146,8 @@
         afficher("pourcentages-cible", ["% kcal totales", ...pourcentages.map((valeur) => `${formatPourcentage.format(valeur)} %`)]);
         afficher("kcal-cible", ["kcal", ...caloriesNutriments.map((valeur) => format.format(valeur))]);
         valeursCible = valeurs;
+        donneesCible = donnees;
+        document.getElementById("sauvegarder-cible").disabled = false;
         afficherRapport();
       }
 
@@ -199,6 +205,29 @@
 
       configurerImport("fichier-cible", "statut-cible", lireCible);
       configurerImport("fichier-repas", "statut-repas", lireRepas);
+
+      const statutCible = document.getElementById("statut-cible");
+      document.getElementById("sauvegarder-cible").addEventListener("click", () => {
+        try {
+          localStorage.setItem(cleCible, JSON.stringify(donneesCible));
+          statutCible.textContent = "Valeurs cibles sauvegardées dans ce navigateur.";
+          statutCible.classList.remove("error");
+        } catch (erreur) {
+          statutCible.textContent = `Sauvegarde impossible : ${erreur.message}`;
+          statutCible.classList.add("error");
+        }
+      });
+
+      try {
+        const cibleSauvegardee = localStorage.getItem(cleCible);
+        if (cibleSauvegardee !== null) {
+          lireCible(JSON.parse(cibleSauvegardee));
+          statutCible.textContent = "Valeurs cibles restaurées depuis ce navigateur.";
+        }
+      } catch (erreur) {
+        statutCible.textContent = `Restauration impossible : ${erreur.message}`;
+        statutCible.classList.add("error");
+      }
     </script>
   </body>
 </html>
