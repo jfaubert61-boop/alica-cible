@@ -15,6 +15,8 @@
 
       h1 { font-size: 1.5rem; }
       .imports { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+      .cible-actions { display: flex; flex: 0 0 auto; flex-wrap: nowrap; gap: 1rem; }
+      .cible-actions .import-button { white-space: nowrap; }
       .import-button {
         position: relative;
         display: inline-block;
@@ -49,15 +51,17 @@
     <p>Sélectionnez vos fichiers JSON dans le dossier OneDrive/Import_1D.</p>
     <p class="hint">Sur iPhone, ouvrez OneDrive depuis l'application Fichiers et sélectionnez le fichier souhaité.</p>
     <div class="imports">
-      <label class="import-button">
-        Importer ali_cible.json
-        <input type="file" id="fichier-cible">
-      </label>
+      <div class="cible-actions">
+        <label class="import-button">
+          Imp. Cible
+          <input type="file" id="fichier-cible">
+        </label>
+        <button type="button" class="import-button" id="sauvegarder-cible" disabled>Sauv. Cible</button>
+      </div>
       <label class="import-button">
         Importer les repas JSON
         <input type="file" id="fichier-repas">
       </label>
-      <button type="button" class="import-button" id="sauvegarder-cible" disabled>Sauvegarder les valeurs cibles</button>
     </div>
     <p class="hint">Les valeurs cibles sauvegardées sont conservées dans ce navigateur et affichées à la prochaine ouverture.</p>
     <p id="statut-cible" class="status" role="status" aria-live="polite"></p>
